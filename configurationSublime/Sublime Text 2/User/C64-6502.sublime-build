@@ -1,0 +1,3 @@
+{
+	"cmd": ["/usr/local/bin/assemble_6502", "${file}"]
+}

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+echo "Building Commodore BASIC prg with Input file $1"
+ARGUMENT="$1"
+
+OUTPUT=$(awk '/\!to/' "$1" | sed 's/.*\/\(.*\)\".*/\1/')
+
+if [ ! -n "$OUTPUT" ]; then
+    echo "You have not specified an output directory with the !to pseudo opcode"
+        echo 'example:  0 rem !to "build/hello_world.prg"'
+
+    exit 1
+fi
+
+
+BUILD_DIR=$(awk '/\!to/' "$ARGUMENT" | sed 's/.*"\(.*\)".*/\1/')
+BUILD_DIR=$(dirname $BUILD_DIR)
+
+if [ ! -d "$BUILD_DIR" ] 
+then
+	echo "$BUILD_DIR does not exists - creating it."
+    mkdir -p "$BUILD_DIR"
+fi
+
+
+/usr/local/bin/petcat -w2 -o "$BUILD_DIR/$OUTPUT" -- "$1"
+
+killall x64 || true 
+echo "crunching..."
+echo "original and a crunched version will be put into the directory."
+echo "the original version will be loaded into the emulator"
+/usr/local/bin/exobasic -N -r "$BUILD_DIR/$OUTPUT" 
+echo "loading $BUILD_DIR/$OUTPUT"
+/Applications/Vice64/x64.app/Contents/MacOS/x64 "$BUILD_DIR/$OUTPUT" &

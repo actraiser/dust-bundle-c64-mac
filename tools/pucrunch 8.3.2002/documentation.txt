@@ -1,0 +1,203 @@
+Usage
+
+Usage: pucrunch [-«flags»] [«infile» [«outfile»]]
+     c«val»    machine: 
+     a         avoid video matrix (for VIC20)
+     d         data (no loading address)
+     l«val»    set/override load address
+     x«val»    set execution address
+     e«val»    force escape bits
+     r«val»    restrict lz search range
+    +f         disable fast mode
+    -flist     lists available decompressor versions
+    -fbasic    select the decompressor for basic programs (VIC20 and C64)
+    -ffast     select the faster but longer decompressor, if available
+    -fshort    select the shorter but slower decompressor, if available
+    -fdelta    use waveform matching
+     n         no RLE/LZ length optimization
+     s         full statistics
+     p«val»    force extralzposbits
+     m«val»    max len 5..7 (64/128/256)
+     i«val»    interrupt enable after decompress (0=disable)
+     g«val»    memory configuration after decompress
+     u         unpack
+Pucrunch expects any number of options and upto two filenames. If you only give one filename, the compressed file is written to the stardard output. If you leave out both filenames, the input is in addition read from the stardard input. Options needing no value can be grouped together. All values can be given in decimal (no prefix), octal (prefix 0), or hexadecimal (prefix $ or 0x).
+Example: pucrunch demo.prg demo.pck -m6 -fs -p2 -x0xc010
+
+Option descriptions:
+
+c«val»
+Selects the machine. Possible values are 128(C128), 64(C64), 20(VIC20), 16(C16/Plus4), 0(standalone). The default is 64, i.e. Commodore 64. If you use -c0, a packet without the embedded decompression code is produced. This can be decompressed with a standalone routine and of course with pucrunch itself. The 128-mode is not fully developed yet. Currently it overwrites memory locations $f7-$f9 (Text mode lockout, Scrolling, and Bell settings) without restoring them later.
+a
+Avoids video matrix if possible. Only affects VIC20 mode.
+d
+Indicates that the file does not have a load address. A load address can be specified with -l option. The default load address if none is specified is 0x258.
+l«val»
+Overrides the file load address or sets it for data files.
+x«val»
+Sets the execution address or overrides automatically detected execution address. Pucrunch checks whether a SYS-line is present and tries to decode the address. Plain decimal addresses and addresses in parenthesis are read correctly, otherwise you need to override any incorrect value with this option.
+e«val»
+Fixes the number of escape bits used. You don't usually need or want to use this option.
+r«val»
+Sets the LZ77 search range. By specifying 0 you get only RLE. You don't usually need or want to use this option.
++f
+Disables 2MHz mode for C128 and 2X mode in C16/+4.
+-fbasic
+Selects the decompressor for basic programs. This version performs the RUN function and enters the basic interpreter automatically. Currently only C64 and VIC20 are supported.
+-ffast
+Selects the faster, but longer decompressor version, if such version is available for the selected machine and selected options. Without this option the medium-speed and medium-size decompressor is used.
+-fshort
+Selects the shorter, but slower decompressor version, if such version is available for the selected machine and selected options. Without this option the medium-speed and medium-size decompressor is used.
+-fdelta
+Allows delta matching. In this mode only the waveforms in the data matter, any offset is allowed and added in the decompression. Note that the decompressor becomes 22 bytes longer if delta matching is used and the short decompressor can't be used (24 bytes more). This means that delta matching must get more than 46 bytes of total gain to get any net savings. So, always compare the result size to a version compressed without -fdelta.
+Also, the compression time increases because delta matching is more complicated. The increase is not 256-fold though, somewhere around 6-7 times is more typical. So, use this option with care and do not be surprised if it doesn't help on your files.
+
+n
+Disables RLE and LZ77 length optimization. You don't usually need or want to use this option.
+s
+Display full statistics instead of a compression summary.
+p«val»
+Fixes the number of extra LZ77 position bits used for the low part. If pucrunch tells you to to use this option, see if the new setting gives better compression.
+m«val»
+Sets the maximum length value. The value should be 5, 6, or 7. The lengths are 64, 128 and 256, respectively. If pucrunch tells you to to use this option, see if the new setting gives better compression. The default value is 7.
+i«val»
+Defines the interrupt enable state to be used after decompression. Value 0 disables interrupts, other values enable interrupts. The default is to enable interrupts after decompression.
+g«val»
+Defines the memory configuration to be used after decompression. Only used for C64 mode (-c64). The default value is $37.
+u
+Unpacks/decompresses a file instead of compressing it. The file to decompress must have a decompression header compatible with one of the decompression headers in the current version.
+Note: Because pucrunch contains both RLE and LZ77 and they are specifically designed to work together, DO NOT RLE-pack your files first, because it will decrease the overall compression ratio.
+The Log Book
+
+26.2.1997
+One byte-pair history buffer gives 30% shorter time compared to a single-byte history buffer.
+28.2.1997
+Calculate hash values (byte) for each threes of bytes for faster search, and use the 2-byte history to locate the last occurrance of the 2 bytes to get the minimal LZ sequence. 50% shorter time.
+'Reworded' some of the code to help the compiler generate better code, although it still is not quite 'optimal'.. Progress reports halved. Checks the hash value at old maxval before checking the actual bytes. 20% shorter time. 77% shorter time total (28->6.5).
+
+1.3.1997
+Added a table which extends the lastPair functionality. The table backSkip chains the positions with the same char pairs. 80% shorter time.
+5.3.1997
+Tried reverse LZ, i.e. mirrored history buffer. Gained some bytes, but its not really worth it, i.e. the compress time increases hugely and the decompressor gets bigger.
+6.3.1997
+Tried to have a code to use the last LZ copy position (offset added to the lastly used LZ copy position). On bs.bin I gained 57 bytes, but in fact the net gain was only 2 bytes (decompressor becomes ~25 bytes longer, and the lengthening of the long rle codes takes away the rest 30).
+10.3.1997
+Discovered that my representation of integers 1-63 is in fact an Elias Gamma Code. Tried Fibonacci code instead, but it was much worse (~500 bytes on bs.bin, ~300 bytes on delenn.bin) without even counting the expansion of the decompression code.
+12.3.1997
+'huffman' coded RLE byte -> ~70 bytes gain for bs.bin. The RLE bytes used are ranked, and top 15 are put into a table, which is indexed by a Elias Gamma Code. Other RLE bytes get a prefix "1111".
+15.3.1997
+The number of escape bits used is again selectable. Using only one escape bit for delenn.bin gains ~150 bytes. If -e-option is not selected, automatically selects the number of escape bits (is a bit slow).
+16.3.1997
+Changed some arrays to short. 17 x inlen + 64kB memory used. opt_escape() only needs two 16-element arrays now and is slightly faster.
+31.3.1997
+Tried to use BASIC ROM as a codebook, but the results were not so good. For mostly-graphics files there are no long matches -> no net gain, for mostly-code files the file itself gives a better codebook.. Not to mention that using the BASIC ROM as a codebook is not 100% compatible.
+1.4.1997
+Tried maxlen 128, but it only gained 17 bytes on ivanova.bin, and lost ~15 byte on bs.bin. This also increased the LZPOS maximum value from ~16k to ~32k, but it also had little effect.
+2.4.1997
+Changed to coding so that LZ77 has the priority. 2-byte LZ matches are coded in a special way without big loss in efficiency, and codes also RLE/Escape.
+5.4.1997
+Tried histogram normalization on LZLEN, but it really did not gain much of anything, not even counting the mapping table from index to value that is needed.
+11.4.1997
+8..14 bit LZPOS base part. Automatic selection. Some more bytes are gained if the proper selection is done before the LZ/RLELEN optimization. However, it can't really be done automatically before that, because it is a recursive process and the original LZ/RLE lengths are lost in the first optimization..
+22.4.1997
+Found a way to speed up the almost pathological cases by using the RLE table to skip the matching beginnings.
+2.5.1997
+Switched to maximum length of 128 to get better results on the Calgary Corpus test suite.
+25.5.1997
+Made the maximum length adjustable. -m5, -m6, and -m7 select 64, 128 and 256 respectively. The decompression code now allows escape bits from 0 to 8.
+1.6.1997
+Optimized the escape optimization routine. It now takes almost no time at all. It used a whole lot of time on large escape bit values before. The speedup came from a couple of generic data structure optimizations and loop removals by informal deductions.
+3.6.1997
+Figured out another, better way to speed up the pathological cases. Reduced the run time to a fraction of the original time. All 64k files are compressed under one minute on my 25 MHz 68030. pic from the Calgary Corpus Suite is now compressed in 19 seconds instead of 7 minutes (200 MHz Pentium w/ FreeBSD). Compression of ivanova.bin (one of my problem cases) was reduced from about 15 minutes to 47 seconds. The compression of bs.bin has been reduced from 28 minutes (the first version) to 24 seconds. An excellent example of how the changes in the algorithm level gives the most impressive speedups.
+6.6.1997
+Changed the command line switches to use the standard approach.
+11.6.1997
+Now determines the number of bytes needed for temporary data expansion (i.e. escaped bytes). Warns if there is not enough memory to allow successful decompression on a C64.
+Also, now it's possible to decompress the files compressed with the program (must be the same version). (-u)
+
+17.6.1997
+Only checks the lengths that are power of two's in OptimizeLength(), because it does not seem to be any (much) worse than checking every length. (Smaller than found maximum lengths are checked because they may result in a shorter file.) This version (compiled with optimizations on) only spends 27 seconds on ivanova.bin.
+19.6.1997
+Removed 4 bytes from the decrunch code (begins to be quite tight now unless some features are removed) and simultaneously removed a not-yet-occurred hidden bug.
+23.6.1997
+Checked the theoretical gain from using the lastly outputted byte (conditional probabilities) to set the probabilities for normal/LZ77/RLE selection. The number of bits needed to code the selection is from 0.0 to 1.58, but even using arithmetic code to encode it, the original escape system is only 82 bits worse (ivanova.bin), 7881/7963 bits total. The former figure is calculated from the entropy, the latter includes LZ77/RLE/escape select bits and actual escapes.
+18.7.1997
+In LZ77 match we now check if a longer match (further away) really gains more bits. Increase in match length can make the code 2 bits longer. Increase in match offset can make the code even longer (2 bits for each magnitude). Also, if LZPOS low part is longer than 8, the extra bits make the code longer if the length becomes longer than two.
+ivanova -5 bytes, sheridan -14, delenn -26, bs -29
+
+When generating the output rescans the LZ77 matches. This is because the optimization can shorten the matches and a shorter match may be found much nearer than the original longer match. Because longer offsets usually use more bits than shorter ones, we get some bits off for each match of this kind. Actually, the rescan should be done in OptimizeLength() to get the most out of it, but it is too much work right now (and would make the optimize even slower).
+
+29.8.1997
+4 bytes removed from the decrunch code. I have to thank Tim Rogers (timr@eurodltd co uk) for helping with 2 of them.
+12.9.1997
+Because SuperCPU doesn't work correctly with inc/dec $d030, I made the 2 MHz user-selectable and off by default. (-f)
+13.9.1997
+Today I found out that most of my fast string matching algorithm matches the one developed by [Fenwick and Gutmann, 1994]*. It's quite frustrating to see that you are not a genius after all and someone else has had the same idea. :-) However, using the RLE table to help still seems to be an original idea, which helps immensely on the worst cases. I still haven't read their paper on this, so I'll just have to get it and see..
+* [Fenwick and Gutmann, 1994]. P.M. Fenwick and P.C. Gutmann, "Fast LZ77 String Matching", Dept of Computer Science, The University of Auckland, Tech Report 102, Sep 1994
+
+14.9.1997
+The new decompression code can decompress files from $258 to $ffff (or actually all the way upto $1002d :-). The drawback is: the decompression code became 17 bytes longer. However, the old decompression code is used if the wrap option is not needed.
+16.9.1997
+The backSkip table can now be fixed size (64 kWord) instead of growing enormous for "BIG" files. Unfortunately, if the fixed-size table is used, the LZ77 rescan is impractical (well, just a little slow, as we would need to recreate the backSkip table again). On the other hand the rescan did not gain so many bytes in the first place (percentage). The define BACKSKIP_FULL enables the old behavior (default). Note also, that for smaller files than 64kB (the primary target files) the default consumes less memory.
+The hash value compare that is used to discard impossible matches does not help much. Although it halves the number of strings to consider (compared to a direct one-byte compare), speedwise the difference is negligible. I suppose a mismatch is found very quickly when the strings are compared starting from the third charater (the two first characters are equal, because we have a full hash table). According to one test file, on average 3.8 byte-compares are done for each potential match. A define HASH_COMPARE enables (default) the hash version of the compare, in which case "inlen" bytes more memory is used.
+
+After removing the hash compare my algorithm quite closely follows the [Fenwick and Gutmann, 1994] fast string matching algorithm (except the RLE trick). (Although I *still* haven't read it.)
+
+14 x inlen + 256 kB of memory is used (with no HASH_COMPARE and without BACKSKIP_FULL).
+
+18.9.1997
+One byte removed from the decompression code (both versions).
+30.12.1997
+Only records longer matches if they compress better than shorter ones. I.e. a match of length N at offset L can be better than a match of length N+1 at 4*L. The old comparison was "better or equal" (">="). The new comparison "better" (">") gives better results on all Calgary Corpus files except "geo", which loses 101 bytes (0.14% of the compressed size).
+An extra check/rescan for 2-byte matches in OptimizeLength() increased the compression ratio for "geo" considerably, back to the original and better. It seems to help for the other files also. Unfortunately this only works with the full backskip table (BACKSKIP_FULL defined).
+
+21.2.1998
+Compression/Decompression for VIC20 and C16/+4 incorporated into the same program.
+16.3.1998
+Removed two bytes from the decompression codes.
+17.8.1998
+There was a small bug in pucrunch which caused the location $2c30 to be incremented (inc $2c30 instead of bit $d030) when run without the -f option. The source is fixed and executables are now updated.
+21.10.1998
+Added interrupt state (-i«val») and memory configuration (-g«val») settings. These settings define which memory configuration is used and whether interrupts will be enabled or disabled after decompression. The executables have been recompiled.
+13.2.1999
+Verified the standalone decompressor. With -c0 you can now generate a packet without the attached decompressor. The decompressor allows the data anywhere in memory provided the decompressed data doesn't overwrite it.
+25.8.1999
+Automatised the decompressor relocation information generation and merged all decompressor versions into the same uncrunch.asm file. All C64, VIC20 and C16/+4 decompressor variations are now generated from this file. In addition to the default version, a fast but longer, and a short but slower decompressor is provided for C64. You can select these with -ffast and -fshort, respectively. VIC20 and C16/+4 now also have a non-wrap versions. These save 24 bytes compared to the wrap versions.
+3.12.1999
+Delta LZ77 matching was added to help some weird demo parts on the suggestion of Wanja Gayk (Brix/Plush). In this mode (-fdelta) the DC offset in the data is discarded when making matches: only the 'waveform' must be identical. The offset is restored when decompressing. As a bonus this match mode can generate descending and ascending strings with any step size. Sounds great, but there are some problems:
+these matches are relatively rare -- usually basic LZ77 can match the same strings
+the code for these matches is quite long (at least currently) -- 4-byte matches are needed to gain anything
+the decompressor becomes 22 bytes longer if delta matching is used and the short decompressor version can't be used (24 bytes more). This means that delta matching must get more than 46 bytes of total gain to get any net savings.
+the compression time increases because matching is more complicated -- not 256-fold though, somewhere around 6-7 times is more typical
+more memory is also used -- 4*insize bytes extra
+However, if no delta matches get used for a file, pucrunch falls back to non-delta decompressor, thus reducing the size of the decompressor automatically by 22 (normal mode) or 46 bytes (-fshort).
+I also updated the C64 test file figures. -fshort of course shortened the files by 24 bytes and -fdelta helped on bs.bin. Beating RLE+ByteBoiler by amazing 350 bytes feels absolutely great!
+
+4.12.1999
+See 17.8.1998. This time "dec $d02c" was executed instead of "bit $d030" after decompression, if run without the -f option. Being sprite#5 color register, this bug has gone unnoticed since 25.8.1999.
+7.12.1999
+Added a short version of the VIC20 decompressor. Removed a byte from the decrunch code, only the "-ffast" version remained the same size.
+14.12.1999
+Added minimal C128 support. $f7-$f9 (Text mode lockout, Scrolling, and Bell settings) are overwritten and not reinitialized.
+30.1.2000
+For some reason -fshort doesn't seem to work with VIC20. I'll have to look into it. It looks like a jsr in the decompression code partly overwrites the RLE byte code table. The decompressor needs 5 bytes of stack. The stack pointer it now set to $ff at startup for non-C64 short decompressor versions, so you can't just change the final jmp into rts to get a decompressed version of a program.
+Also, the "-f" operation for C16/+4 was changed to blank the screen instead of using the "freeze" bit.
+
+2MHz or other speedups are now automatically selected. You can turn these off with the "+f" option.
+
+8.3.2002
+The wrong code was used for EOF and with -fdelta the EOF code and the shortest DELTA LZ length code overlapped, thus decompression ended prematurely.
+24.3.2004
+-fbasic added to allow compressing BASIC programs with ease. Calls BASIC run entrypoint ($a871 with Z=1), then BASIC Warm Start ($a7ae). Currently only VIC20 and C64 decompressors are available. What are the corresponding entrypoints for C16/+4 and C128?
+Some minor tweaks. Reduced the RLE byte code table to 15 entries.
+
+21.12.2005
+Pucrunch is now under GNU LGPL. And the decompression code is distributed under the WXWindows Library Licence. (In short: binary version of the decompression code can accompany the compressed data or used in decompression programs.)
+28.12.2007
+Ported the development directory to FreeBSD. Noticed that the -fbasic version has not been released. -flist option added.
+13.1.2008
+Added -fbasic support for C128.
+18.1.2008
+Added -fbasic support for C16/+4.
+22.11.2008
+Fix for sys line detection routine. Thanks for Zed Yago.
