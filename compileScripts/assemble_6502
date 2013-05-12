@@ -26,7 +26,7 @@ fi
 
 # start compiling
 echo "Compiling 6502 code with Input file $1 to $OUTPUT"
-/usr/local/bin/acme "$1"
+/usr/local/bin/acme -l "$BUILD_DIR/labels" "$1"
 
 # crunch output prg file
 echo "crunching $OUTPUT"
@@ -35,3 +35,6 @@ echo "crunching $OUTPUT"
 # run in emulator
 echo "loading $PWD/../build/$OUTPUT"
 /Applications/Vice64/x64.app/Contents/MacOS/x64 "$BUILD_DIR/$OUTPUT" &
+
+# echo labels
+cat "$BUILD_DIR/labels"
