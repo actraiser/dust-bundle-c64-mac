@@ -1,7 +1,7 @@
 CC=gcc
 PROFILE=
 CFLAGS=-Wall -std=c99 -O3 -DNDEBUG ${PROFILE}
-LDFLAGS=-lm ${PROFILE} /usr/lib/bundle1.o
+#LDFLAGS=-lm ${PROFILE} /usr/lib/bundle1.o
 
 all:		sidreloc
 

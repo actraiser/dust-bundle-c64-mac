@@ -27,16 +27,18 @@ build: $(MAKEFILE) exomizer exoraw exobasic
 
 exomizer: deps $(EXO_OBJS) $(SHARED_OBJS)
 	@echo "Linking $@"
-	@$(CC) $(LDFLAGS) -o $@ $(EXO_OBJS) $(SHARED_OBJS)
+	#@$(CC) $(LDFLAGS) -o $@ $(EXO_OBJS) $(SHARED_OBJS)
+	@$(CC) -o $@ $(EXO_OBJS) $(SHARED_OBJS)
 
 exoraw: deps $(RAW_OBJS) $(SHARED_OBJS)
 	@echo "Linking $@"
-	@$(CC) $(LDFLAGS) -o $@ $(RAW_OBJS) $(SHARED_OBJS)
+	#@$(CC) $(LDFLAGS) -o $@ $(RAW_OBJS) $(SHARED_OBJS)
+	@$(CC) -o $@ $(RAW_OBJS) $(SHARED_OBJS)
 
 exobasic: deps $(BAS_OBJS) $(SHARED_OBJS)
 	@echo "Linking $@"
-	@$(CC) $(LDFLAGS) -o $@ $(BAS_OBJS) $(SHARED_OBJS)
-
+	#@$(CC) $(LDFLAGS) -o $@ $(BAS_OBJS) $(SHARED_OBJS)
+	@$(CC) -o $@ $(BAS_OBJS) $(SHARED_OBJS)
 clean:
 	@echo "Cleaning project"
 	-@$(RM) $(EXO_OBJS) $(RAW_OBJS) $(BAS_OBJS) $(SHARED_OBJS)
@@ -68,4 +70,5 @@ deps: $(wildcard *.h) asm.tab.h
 	@$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
 %:	%.o
-	@$(CC) $(LDFLAGS) $< -o $@
+	#@$(CC) $(LDFLAGS) $< -o $@
+	@$(CC) $< -o $@
