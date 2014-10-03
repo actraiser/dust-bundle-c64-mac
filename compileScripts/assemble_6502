@@ -27,6 +27,13 @@ fi
 # start compiling
 echo "Compiling 6502 code with Input file $1 to $OUTPUT"
 /usr/local/bin/acme -l "$BUILD_DIR/labels" "$1"
+acme_status=$?
+
+if test $acme_status -ne 0
+then
+	echo "ACME assembler failed"
+    exit
+fi
 
 # crunch output prg file
 echo "crunching $OUTPUT"
