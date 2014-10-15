@@ -9,6 +9,8 @@ ARGUMENT="$1"
 OUTPUT=$(awk '/\!to/' "$1" | sed 's/.*\/\(.*\)\".*/\1/')
 BUILD_DIR=$(awk '/\!to/' "$ARGUMENT" | sed 's/.*"\(.*\)".*/\1/')
 BUILD_DIR=$(dirname $BUILD_DIR)
+MONITOR_CMD_INPUT="monitor_commands"
+MONITOR_CMD_OUTPUT="/tmp/monitor_commands"
 
 
 if [ ! -n "$OUTPUT" ]; then
@@ -20,7 +22,7 @@ fi
 
 if [ ! -d "$BUILD_DIR" ] 
 then
-	echo "$BUILD_DIR does not exists - creating it."
+    echo "$BUILD_DIR does not exists - creating it."
     mkdir -p "$BUILD_DIR"
 fi
 
@@ -28,20 +30,27 @@ fi
 echo "Compiling 6502 code with Input file $1 to $OUTPUT"
 /usr/local/bin/acme -l "$BUILD_DIR/labels" "$1"
 acme_status=$?
-
 if test $acme_status -ne 0
 then
-	echo "ACME assembler failed"
+    echo "ACME assemble failed"
     exit
 fi
+
+
 
 # crunch output prg file
 echo "crunching $OUTPUT"
 /usr/local/bin/pucrunch "$BUILD_DIR/$OUTPUT" "$BUILD_DIR/$OUTPUT" 
 
+# generate a Vice64 monitor command file containing all the label defs plus the contents
+# of monitor_commands if it exists
+awk '{print "add_label "$3" ."$1}' $BUILD_DIR/labels > $MONITOR_CMD_OUTPUT
+if [ -f $MONITOR_CMD_INPUT ]
+then
+    cat $MONITOR_CMD_INPUT >> $MONITOR_CMD_OUTPUT
+fi
+echo "" >> $MONITOR_CMD_OUTPUT  # make sure the files ends with the newline so Vice reads the file correctly
+
 # run in emulator
 echo "loading $PWD/../build/$OUTPUT"
-/Applications/Vice64/x64.app/Contents/MacOS/x64 "$BUILD_DIR/$OUTPUT" &
-
-# echo labels
-cat "$BUILD_DIR/labels"
+/Applications/Vice64/x64.app/Contents/MacOS/x64 -moncommands $MONITOR_CMD_OUTPUT "$BUILD_DIR/$OUTPUT" &
